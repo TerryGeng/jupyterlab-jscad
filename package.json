@@ -17,8 +17,8 @@
   },
   "license": "BSD-3-Clause",
   "author": {
-    "name": "Project Jupyter",
-    "email": "jupyter@googlegroups.com"
+    "name": "Terry Geng",
+    "email": "terry@terriex.com"
   },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

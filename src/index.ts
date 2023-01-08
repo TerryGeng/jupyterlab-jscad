@@ -11,17 +11,10 @@ import { cameras, entitiesFromSolids, controls, prepareRender, drawCommands } fr
 
 import '../style/index.css';
 
-import { getEntitiesProjectionBound } from './geom-bound';
-
 /**
  * The CSS class to add to the GeoJSON Widget.
  */
 const CSS_CLASS = 'jp-RenderedJSCAD';
-
-/**
- * The CSS class for a GeoJSON icon.
- */
-// const CSS_ICON_CLASS = 'jp-MaterialIcon jp-GeoJSONIcon';
 
 /**
  * The MIME type for JSCAD.
@@ -44,18 +37,10 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
         this._render = null;
         this._renderOptions = null;
         this._updateView = true;
-        this._controls = controls.orbit.defaults;
+        this._controls = Object.assign({}, controls.orbit.defaults);
 
         this._container = document.createElement("div");
         this.node.appendChild(this._container);
-        
-        this._buttonPanel = document.createElement("div");
-        this._buttonPanel.className = 'jp-JSCADButtonPanel';
-        this._fitGeomButton = document.createElement("button");
-        this._fitGeomButton.textContent = 'fit geometries';
-        this._buttonPanel.appendChild(this._fitGeomButton);
-        this.node.appendChild(this._buttonPanel);
-
 
         this._panDelta = [0, 0];
         this._rotateDelta = [0, 0];
@@ -64,16 +49,6 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
         this._mousePointerDown = false;
         this._mouseLastX = 0;
         this._mouseLastY = 0;
-
-        const savedCameraPosition = window.localStorage.getItem('jupyter-jscad-camera-position') || null;
-        const savedCameraTarget = window.localStorage.getItem('jupyter-jscad-camera-target') || null;
-
-        if (savedCameraPosition != null) {
-            this._camera.position = savedCameraPosition.split(",").map(function (x: string) { return parseInt(x, 10); });
-        }
-        if (savedCameraTarget != null) {
-            this._camera.target = savedCameraTarget.split(",").map(function (x: string) { return parseInt(x, 10); });
-        }
     }
 
     /**
@@ -169,39 +144,34 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
         this._container.onpointerup = null;
         this._container.onwheel = null;
     }
-
-    fitBoxToGeometries(): void {
-        const currentWidth = this._camera.viewport[2] - this._camera.viewport[0];
-        const currentHeight = this._camera.viewport[3] - this._camera.viewport[1];
-        const [xBoxSize, yBoxSize] = getEntitiesProjectionBound(
-            this._entities, 
-            this._camera.projection, 
-            currentWidth,
-            currentHeight);
-        this._camera.target = [0, 0, 0];
-
-        const pixelRatio = window.devicePixelRatio || 1;
-        const bounds = this.node.getBoundingClientRect();
-
-        const width = (bounds.right - bounds.left) * pixelRatio;
-        const height = Math.max(300, yBoxSize)* pixelRatio;
-
-        this._container.style.height = height.toString() + "px";
-        this._container.style.width = width.toString() + "px";
     
-        cameras.perspective.setProjection(this._camera, this._camera, { width, height });
-    }
-
     /**
      * Render JSCAD models into this widget's node.
      */
     renderModel(model: IRenderMime.IMimeModel): Promise<void> {
         const data = model.data[this._mimeType] as any;
+
+        if (data.preserveCamera) {
+            const savedCameraPosition = window.localStorage.getItem('jupyter-jscad-camera-position') || null;
+            const savedCameraTarget = window.localStorage.getItem('jupyter-jscad-camera-target') || null;
+
+            if (savedCameraPosition != null) {
+                this._camera.position = savedCameraPosition.split(",").map(function (x: string) { return parseInt(x, 10); });
+            }
+            if (savedCameraTarget != null) {
+                this._camera.target = savedCameraTarget.split(",").map(function (x: string) { return parseInt(x, 10); });
+            }
+        }
+
+        this._minHeight = data.minHeight || 300;
+        this._forceHeight = data.height || null;
+
         if (this._updateReqId) {
             window.cancelAnimationFrame(this._updateReqId);
         }
+
         return new Promise<void>((resolve, reject) => {
-            this._entities = entitiesFromSolids({}, data.data);
+            this._entities = entitiesFromSolids({}, data.geom);
 
             this.prepareGestures();
 
@@ -268,10 +238,7 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
             }
 
             this._updateView = true;
-            //this._container.onresize = () => this.setCameraPerspective();
             this._updateReqId = window.requestAnimationFrame(updateAndRender);
-
-            this._fitGeomButton.onclick = () => this.fitBoxToGeometries();
 
             this.update();
             resolve();
@@ -283,7 +250,7 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
         const bounds = this.node.getBoundingClientRect();
 
         const width = (bounds.right - bounds.left) * pixelRatio;
-        const height = Math.max((bounds.bottom - bounds.top) * pixelRatio, 300);
+        const height = this._forceHeight || Math.max((bounds.bottom - bounds.top) * pixelRatio, this._minHeight);
 
         this._container.style.height = height.toString() + "px";
         this._container.style.width = width.toString() + "px";
@@ -339,8 +306,8 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
     private _mouseLastX: number;
     private _mouseLastY: number;
     private _container: HTMLElement;
-    private _fitGeomButton: HTMLElement;
-    private _buttonPanel: HTMLElement;
+    private _minHeight: number;
+    private _forceHeight: number;
 };
 
 /**
