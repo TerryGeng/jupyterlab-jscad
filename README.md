@@ -1,6 +1,9 @@
 # jupyterlab-jscad
 
-A JupyterLab extension for rendering JSCAD geometries. Designed to work with [ijavascript](https://github.com/n-riesco/ijavascript) kernel.
+A JupyterLab extension for rendering [JSCAD](https://github.com/jscad/OpenJSCAD.org) geometries. 
+Designed to work with [IJavascript](https://github.com/n-riesco/ijavascript) kernel.
+
+JSCAD is a set of tools for creating parametric 2D and 3D designs with Javascript code.
 
 ![screenshot](screenshot.jpg)
 
@@ -46,4 +49,17 @@ jupyter labextension install . --no-build
 ```
 
 See tutorials at [https://jupyterlab.readthedocs.io/en/stable/extension/extension_tutorial.html](https://jupyterlab.readthedocs.io/en/stable/extension/extension_tutorial.html)
-and [https://github.com/jupyterlab/jupyterlab-mp4/blob/master/tutorial.md](https://github.com/jupyterlab/jupyterlab-mp4/blob/master/tutorial.md
+and [https://github.com/jupyterlab/jupyterlab-mp4/blob/master/tutorial.md](https://github.com/jupyterlab/jupyterlab-mp4/blob/master/tutorial.md)
+
+## Acknowledgment
+
+This project was mainly motivated by [danmarshall/jscad-now](https://github.com/danmarshall/jscad-now).
+
+The idea of using MIME renderer was learned from [n-riesco/ijavascript-plotly](https://github.com/n-riesco/ijavascript-plotly).
+Given that `comm` feature haven't been implemented in IJavascript, this would be probably the most straight-forward approach in rendering a model.
+
+The structure of this project is based on examples in [jupyterlab/jupyter-renderers](https://github.com/jupyterlab/jupyter-renderers).
+
+
+
+
