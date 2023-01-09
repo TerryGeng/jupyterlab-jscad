@@ -249,13 +249,13 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
         const pixelRatio = window.devicePixelRatio || 1;
         const bounds = this.node.getBoundingClientRect();
 
-        const width = (bounds.right - bounds.left) * pixelRatio;
-        const height = this._forceHeight || Math.max((bounds.bottom - bounds.top) * pixelRatio, this._minHeight);
+        const width = (bounds.right - bounds.left);
+        const height = this._forceHeight || Math.max((bounds.bottom - bounds.top), this._minHeight);
 
         this._container.style.height = height.toString() + "px";
-        this._container.style.width = width.toString() + "px";
     
-        cameras.perspective.setProjection(this._camera, this._camera, { width, height });
+        cameras.perspective.setProjection(this._camera, this._camera, 
+                                          { width: width * pixelRatio, height: height * pixelRatio });
 
         this._updateView = true;
     }
