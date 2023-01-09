@@ -13,8 +13,10 @@ JSCAD is a set of tools for creating parametric 2D and 3D designs with Javascrip
 
 ## Install
 
+Download the `.whl` from the Release page.
+
 ```bash
-pip install jupyterlab-jscad
+pip install [path to downloaded .whl file]
 ```
 
 ## Usage
