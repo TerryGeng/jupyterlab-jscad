@@ -59,9 +59,6 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
             window.cancelAnimationFrame(this._updateReqId);
         }
 
-        window.localStorage.setItem('jupyter-jscad-camera-position', this._camera.position);
-        window.localStorage.setItem('jupyter-jscad-camera-target', this._camera.target);
-
         this._camera = null;
         super.dispose();
     }
@@ -118,6 +115,7 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
             const updated = controls.orbit.rotate({ controls: this._controls, camera: this._camera, speed: rotateSpeed }, this._rotateDelta);
             this._controls = { ...this._controls, ...updated.controls };
             this._updateView = true;
+            this._cameraChanged = true;
             this._rotateDelta = [0, 0];
         }
 
@@ -127,6 +125,7 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
             this._panDelta = [0, 0];
             this._camera.position = updated.camera.position;
             this._camera.target = updated.camera.target;
+            this._cameraChanged = true;
             this._updateView = true;
         }
 
@@ -134,6 +133,7 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
             const updated = controls.orbit.zoom({ controls:this._controls, camera:this._camera, speed: zoomSpeed }, this._zoomDelta);
             this._controls = { ...this._controls, ...updated.controls };
             this._zoomDelta = 0;
+            this._cameraChanged = true;
             this._updateView = true;
         }
     }
@@ -151,16 +151,26 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
     renderModel(model: IRenderMime.IMimeModel): Promise<void> {
         const data = model.data[this._mimeType] as any;
 
-        if (data.preserveCamera) {
+        this._zoomToFit = true;
+
+        this._useLastCamera = data.useLastCamera;
+        this._saveCamera = data.saveCamera;
+
+        if (this._useLastCamera) {
             const savedCameraPosition = window.localStorage.getItem('jupyter-jscad-camera-position') || null;
             const savedCameraTarget = window.localStorage.getItem('jupyter-jscad-camera-target') || null;
 
             if (savedCameraPosition != null) {
                 this._camera.position = savedCameraPosition.split(",").map(function (x: string) { return parseInt(x, 10); });
+                this._zoomToFit = false;
             }
             if (savedCameraTarget != null) {
                 this._camera.target = savedCameraTarget.split(",").map(function (x: string) { return parseInt(x, 10); });
+                this._zoomToFit = false;
             }
+        } else {
+            window.localStorage.removeItem('jupyter-jscad-camera-position');
+            window.localStorage.removeItem('jupyter-jscad-camera-target');
         }
 
         this._minHeight = data.minHeight || 300;
@@ -216,20 +226,28 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
             const updateAndRender = (): void => {
                 this.doRotatePanZoom();
 
+                if (this._render == null) {
+                    this._render = prepareRender({
+                        glOptions: { container: this._container },
+                    })
+                }
+
                 if (this._updateView) {
                     // prepare the renderer
-                    if (this._render == null) {
-                        this._render = prepareRender({
-                            glOptions: { container: this._container },
-                        })
-                    }
-
                     const updates = controls.orbit.update({ controls: this._controls, camera: this._camera });
                     this._controls = { ...this._controls, ...updates.controls };
                     this._updateView = this._controls.changed; // for elasticity in rotate / zoom
 
                     this._camera.position = updates.camera.position;
                     cameras.perspective.update(this._camera, this._camera);
+
+                    if (this._cameraChanged) {
+                        this._cameraChanged = this._updateView;
+                        if (this._saveCamera) {
+                            window.localStorage.setItem('jupyter-jscad-camera-position', this._camera.position);
+                            window.localStorage.setItem('jupyter-jscad-camera-target', this._camera.target);
+                        }
+                    }
 
                     this._render(this._renderOptions);
                 }
@@ -256,6 +274,13 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
     
         cameras.perspective.setProjection(this._camera, this._camera, 
                                           { width: width * pixelRatio, height: height * pixelRatio });
+
+        if (this._zoomToFit) {
+            this._zoomToFit = false;
+            this._controls.zoomToFit.tightness = 1.5
+            const updated = controls.orbit.zoomToFit({ controls: this._controls, camera: this._camera, entities: this._entities })
+            this._controls = { ...this._controls, ...updated.controls }
+        }
 
         this._updateView = true;
     }
@@ -308,6 +333,10 @@ export class RenderedJSCAD extends Widget implements IRenderMime.IRenderer {
     private _container: HTMLElement;
     private _minHeight: number;
     private _forceHeight: number;
+    private _zoomToFit: boolean;
+    private _cameraChanged: boolean;
+    private _useLastCamera: boolean;
+    private _saveCamera: boolean;
 };
 
 /**
