@@ -33,11 +33,26 @@ let { cube } = jscad.primitives
 $$.mime({
     "application/jscad-geom": {
         geom: cube({ size: 10 }), // <--- feed output geometries here
-        preserveCamera: true,     // <--- preserve camera position across executions
-        minHeight: 300,           // <--- set minimum height of the canvas to 300
+        saveCamera: true,         // <--- save camera position
+        useLastCamera: true,      // <--- use last saved camera position
+        // minHeight: 300,        // <--- set minimum height of the canvas to 300
         // height: 300            // <--- force the height of canvas to be 300
     }
-});
+})
+
+// If you don't want such a ceremony, you can define
+function jscad_show(geom) {
+    $$.mime({
+        "application/jscad-geom": {
+            geom,                     // <--- feed output geometries here
+            saveCamera: true,         // <--- save camera position
+            useLastCamera: true,      // <--- use last saved camera position
+        }
+    });
+}
+
+// ... and call
+jscad_show(cube({ size: 10 }))
 ```
 
 ## Contributing
